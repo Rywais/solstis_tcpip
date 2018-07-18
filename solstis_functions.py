@@ -14,7 +14,7 @@ class SolstisError(Exception):
 def init_socket(address='192.168.1.222',port=39933):
   sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
   sock.connect((address,port))
-  sock.setblocking(0)
+  sock.settimeout(1)
   return sock
 
 def send_msg(s,transmission_id,op,params=None):
@@ -53,7 +53,7 @@ def verify_msg(msg,op=None,transmission_id=None):
       msg = "Message with ID"+str(msgID)+" did not match expected ID of: "+\
             str(transmission_id)
   if msg["message"]["op"] == "parse_fail":
-    msg = "Mesage with ID '+str(msgID)+' failed to parse."
+    msg = "Mesage with ID "+str(msgID)+" failed to parse."
     raise SolstisError(msg)
   if op is not None:
     if msgOP != op:
@@ -62,7 +62,7 @@ def verify_msg(msg,op=None,transmission_id=None):
       raise SolstisError(msg)
 
 def start_link(sock,transmission_id=1,ip_address='192.168.1.107'):
-  send_msg(sock,transmission_id,'start_link',{'ip_adress': ip_address})
+  send_msg(sock,transmission_id,'start_link',{'ip_address': ip_address})
   val = recv_msg(sock)
   verify_msg(val,transmission_id=transmission_id,op='start_link_reply')
   if val["message"]["parameters"]["status"] == "ok":
@@ -90,7 +90,7 @@ def set_wave_m(sock, wavelength, transmission_id = 1):
     raise SolstisError("No (wavelength) meter found.")
   elif status == 2:
     raise SolstisError("Wavelength Out of Range.")
-  return status = val["message"]["parameters"]["wavelength"][0]
+  return val["message"]["parameters"]["wavelength"][0]
 
 def poll_wave_m(sock,transmission_id=1):
   """Gets the latest Wavemeter reading and current wavelength tuning status
@@ -114,7 +114,7 @@ def poll_wave_m(sock,transmission_id=1):
     status = True #Not tuning
   else:
     status = False #Still Tuning
-  return val["message"]["parameters"]["wavelength"][0], status
+  return val["message"]["parameters"]["current_wavelength"][0], status
 
 def move_wave_t(sock, wavelength, transmission_id=1):
   """Sets the wavelength based on wavelength table
