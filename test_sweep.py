@@ -4,10 +4,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 #User chosen parameters
-START_WAVELEN = 777.9 #Scan's starting wavelength
-END_WAVELEN = 778.1 #Scan's ending wavelength
-NUM_STEPS = 200 #Number of points in scan
-DELAY = 0.05 #Delay between scan simultaneous settings/measurements
+START_WAVELEN = 775.5 #Scan's starting wavelength
+END_WAVELEN = 780.5 #Scan's ending wavelength
+NUM_STEPS = 500 #Number of points in scan
+DELAY = 0.00 #Delay between scan simultaneous settings/measurements
 
 #Create our socket using default params
 sock = init_socket()
@@ -39,7 +39,7 @@ print("Initial value attained")
 for i in range(1,len(wavelengths)):
 # time.sleep(DELAY)
 # times[i] = time.perf_counter() - init_time
-  wavelengths_measured[i] = set_wave_m(sock,wavelengths[i])
+  wavelengths_measured[i] = set_wave_m_f_r(sock,wavelengths[i])
   print("Progress: ",float(i)/float(NUM_STEPS))
   time.sleep(DELAY)
   while True:
