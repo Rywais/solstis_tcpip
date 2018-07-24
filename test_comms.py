@@ -25,7 +25,7 @@ try:
   data = b''
 
   while amount_received < amount_expected:
-    temp = sock.recv(16)
+    temp = sock.recv(1024)
     amount_received = amount_received + len(temp)
     data = data + temp
   print('Your received data follows:')

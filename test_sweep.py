@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 #User chosen parameters
 START_WAVELEN = 775.5 #Scan's starting wavelength
 END_WAVELEN = 780.5 #Scan's ending wavelength
-NUM_STEPS = 500 #Number of points in scan
+NUM_STEPS = 51 #Number of points in scan
 DELAY = 0.00 #Delay between scan simultaneous settings/measurements
 
 #Create our socket using default params
