@@ -328,8 +328,6 @@ def scan_stitch_initialize(sock,
     scan_rate = [1]; units = "GHz/s"
   elif scan_rate == TeraScan.SCAN_RATE_FINE_LINE_20_GHZ:
     scan_rate = [20]; units = "GHz/s"
-  elif scan_rate == TeraScan.SCAN_RATE_FINE_LINE_15_GHZ:
-    scan_rate = [15]; units = "GHz/s"
   elif scan_rate == TeraScan.SCAN_RATE_FINE_LINE_10_GHZ:
     scan_rate = [10]; units = "GHz/s"
   elif scan_rate == TeraScan.SCAN_RATE_FINE_LINE_5_GHZ:
@@ -556,9 +554,13 @@ def recv_auto_output(sock):
                  sent after reveiving any "start" or "repeat" values
   Raises:
     SolstisError on bad transmission
+    TimeoutError when the socket times out
   """
 
-  val = recv_msg(sock)
+  try:
+    val = recv_msg(sock)
+  except socket.timeout:
+    raise TimeoutError
   verify_msg(val,op="automatic_output")
   status = val["message"]["parameters"]["status"]
   wavelength = val["message"]["parameters"]["wavelength"][0]
