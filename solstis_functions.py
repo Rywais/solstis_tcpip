@@ -588,3 +588,320 @@ def terascan_continue(sock,transmission_id=1):
     raise SolstisError("terascan_continue failed; TeraScan was not paused.")
   else:
     raise SolstisError("TeraScan is not available.")
+
+def get_status(sock, transmission_id=1):
+  """Retrieves the system status information available to the user
+
+  Parameters:
+    sock ~ Socket object to use
+    transmission_id ~ (int) arbitrary integer to use for communications
+  Returns:
+    A dictionary containing the following key/value pairs:
+      "status" ~ 0 on a succesful call, and 1 otherwise 
+      "wavelength" ~ The current wavelength in nm
+      "temperature" ~ Current temperature in degrees Celcius
+      "temperature_status" ~ "on" or "off"
+      "etalon_lock" ~ "on","off","debug","error","search" or "low". See Manual.
+      "etalon_voltage" ~ Reading in Volts
+      "cavity_lock" ~ "on","off","debug","error","search" or "low"
+      "resonator_voltage" ~ Reading in Volts
+      "ecd_lock" ~ "not_fitted","on","off","debug","error","search" or "low"
+      "ecd_voltage" ~ Reading in Volts
+      "output_monitor" ~ Reading in Volts
+      "etalon_pd_dc" ~ Reading in Volts
+      "dither" ~ "on" or "off"
+  Raises:
+    SolstisError on operation failure
+  """
+
+  send_msg(sock,transmission_id,"get_status")
+  val = recv_msg(sock)
+  verify_msg(val,op="get_status_reply",transmission_id=transmission_id)
+  status = val["message"]["parameters"]["status"][0]
+  if status == 1:
+    raise SolstisError("get_status failed: reason unknown")
+  params = val["message"]["parameters"]
+  return_val = {"status": 0}
+  return_val["wavelength"] = params["wavelength"][0]
+  return_val["temperature"] = params["temperature"][0]
+  return_val["temperature_status"] = params["temperature_status"]
+  return_val["etalon_lock"] = params["etalon_lock"]
+  return_val["etalon_voltage"] = params["etalon_voltage"][0]
+  return_val["cavity_lock"] = params["cavity_lock"]
+  return_val["resonator_voltage"] = params["resonator_voltage"][0]
+  return_val["ecd_lock"] = params["ecd_lock"]
+  if params["ecd_voltage"] == "not_fitted":
+    return_val["ecd_voltage"] = -float('inf')
+  else:
+    return_val["ecd_voltage"] = params["ecd_voltage"][0]
+  return_val["output_monitor"] = params["output_monitor"][0]
+  return_val["etalon_pd_dc"] = params["etalon_pd_dc"][0]
+  return_val["dither"] = params["dither"]
+
+  return return_val
+
+def tune_etalon(sock, setting, transmission_id=1):
+  """Tunes the etalon to user-defined value
+
+  Parameters:
+    sock ~ Socket object to use for communications
+    setting ~ (float) Percentage (0-100) of etalon range to go to
+    transmission_id ~ (int) Arbitrary integer for communications
+  Returns:
+    Nothing on success
+  Raises:
+    SolstisError on failure to execute
+  """
+
+  send_msg(sock,transmission_id,"tune_etalon",{"setting": [setting]})
+  val = recv_msg(sock)
+  verify_msg(val,op="tune_etalon_reply",transmission_id=transmission_id)
+  status = val["message"]["parameters"]["status"][0]
+  if status == 0:
+    return
+  elif status == 1:
+    raise SolstisError("Etalon Tuning value is out of range.")
+  else:
+    raise SolstisError("tune_etalon Failed; Reason Unknown")
+
+def tune_resonator(sock, setting, transmission_id=1):
+  """Tunes the resonator to user-defined value
+
+  Parameters:
+    sock ~ Socket object to use for communications
+    setting ~ (float) Percentage (0-100) of resonator range to go to
+    transmission_id ~ (int) Arbitrary integer for communications
+  Returns:
+    Nothing on success
+  Raises:
+    SolstisError on failure to execute
+  """
+
+  send_msg(sock,transmission_id,"tune_resonator",{"setting": [setting]})
+  val = recv_msg(sock)
+  verify_msg(val,op="tune_resonator_reply",transmission_id=transmission_id)
+  status = val["message"]["parameters"]["status"][0]
+  if status == 0:
+    return
+  elif status == 1:
+    raise SolstisError("Resonator Tuning value is out of range.")
+  else:
+    raise SolstisError("tune_resonator Failed; Reason Unknown")
+
+def fine_tune_resonator(sock, setting, transmission_id=1):
+  """Fine-Tunes the resonator to user-defined value
+
+  Parameters:
+    sock ~ Socket object to use for communications
+    setting ~ (float) Percentage (0-100) of resonator fine-tuning range to go to
+    transmission_id ~ (int) Arbitrary integer for communications
+  Returns:
+    Nothing on success
+  Raises:
+    SolstisError on failure to execute
+  """
+
+  send_msg(sock,transmission_id,"fine_tune_resonator",{"setting": [setting]})
+  val = recv_msg(sock)
+  verify_msg(val,op="fine_tune_resonator_reply",transmission_id=transmission_id)
+  status = val["message"]["parameters"]["status"][0]
+  if status == 0:
+    return
+  elif status == 1:
+    raise SolstisError("Resonator Fine-Tuning value is out of range.")
+  else:
+    raise SolstisError("fine_tune_resonator Failed; Reason Unknown")
+
+def etalon_lock(sock,lock,transmission_id=1):
+  """Either locks or unlocks the etalon
+
+  Parameters:
+    sock ~ Socket object to use for communications
+    lock ~ (Boolean) True to lock the etalon, False to unlock it 
+    transmission_id ~ (int) arbitrary integer for use in communications
+  Returns:
+    Nothing on success
+  Raises:
+    SolstisError on failure
+  """
+
+  if lock == True:
+    lock = "on"
+  else:
+    lock = "off"
+
+  send_msg(sock,transmission_id,"etalon_lock",{"operation": lock})
+  val = recv_msg(sock)
+  verify_msg(val,op="etalon_lock_reply",transmission_id=transmission_id)
+  status = val["message"]["parameters"]["status"][0]
+  if status == 0:
+    return
+  else:
+    raise SolstisError("etalon_lock Failed; Reason Unknown")
+
+def fast_scan_start(sock,
+                    scan_type="etalon_continuous",
+                    width=0.01,
+                    time=0.01,
+                    transmission_id=1):
+  """Starts a Fast scan centered at the current set wavelength
+
+  Parameters:
+    sock ~ Socket object to use for communications
+    scan_type ~ One of: "etalon_continuous", "etalon_single",
+                        "cavity_continuous", "cavity_single",
+                        "resonator_continuous", "resonator_single",
+                        "ecd_continuous", "fringe_test", "resonator_ramp",
+                        "ecd_ramp", "cavity_triangular", "resonator_triangular"
+                        See Manual for details
+    width ~ (float) Width of scan about center frequency in GHz
+    time ~ (float) Duration of scan in seconds. Will ramp at max speed if time
+           segment is too small.
+    transmission_id ~ (int) Arbitrary integer for use in communications
+  Returns:
+    Nothing on a succesful execution
+  Raises:
+    SolstisError on failed execution
+  """
+
+  send_msg(sock,transmission_id,"fast_scan_start",
+                                {"scan": scan_type,
+                                 "width": width,
+                                 "time": time} )
+  val = recv_msg(sock)
+  verify_msg(val,op="fast_scan_start_reply",transmission_id=transmission_id)
+  status = val["message"]["parameters"]["status"][0]
+  if status == 0:
+    return
+  elif status == 1:
+    raise SolstisError("Fast Scan Failed: Scan width too large for position")
+  elif status == 2:
+    raise SolstisError("Fast Scan Failed: No reference cavity fitted")
+  elif status == 3:
+    raise SolstisError("Fast Scan Failed: no ERC fitted")
+  elif status == 4:
+    raise SolstisError("Fast Scan Failed: Invalid Scan Type requested")
+  else:
+    raise SolstisError("Fast Scan Failed: Time > 10000 seconds")
+
+def fast_scan_poll(sock, scan_type="etalon_continuous", transmission_id=1):
+  """Polls a currently running fast scan.
+
+  Parameters:
+    sock ~ Sock object to use for communications
+    scan_type ~ One of: "etalon_continuous", "etalon_single",
+                        "cavity_continuous", "cavity_single",
+                        "resonator_continuous", "resonator_single",
+                        "ecd_continuous", "fringe_test", "resonator_ramp",
+                        "ecd_ramp", "cavity_triangular", "resonator_triangular"
+                        See Manual for details
+    transmission_id ~ (int) Arbitrary integer to use for communications
+  Returns:
+    Tuple containing (in increasing index order):
+      -floating point value representing the current tuner value
+      -Boolean stating whether tuning is done/inactive (True = Not tuning)
+  Raises:
+    SolstisError on execution failure
+  """
+
+  send_msg(sock,transmission_id,"fast_scan_poll",{"scan": scan_type})
+  val = recv_msg(sock)
+  verify_msg(val,transmission_id=transmission_id,op="fast_scan_poll_reply")
+  status = val["message"]["parameters"]["status"][0]
+  tuner_value = val["message"]["parameters"]["tuner_value"][0]
+  if status == 1:
+    status = False
+  else:
+    status = True
+  return (tuner_value,status)
+
+def fast_scan_stop(sock,scan_type="etalon_continuous",transmission_id=1):
+  """Stops a fast-scan in progress
+
+  Parameters:
+    sock ~ Sock object to use for communications
+    scan_type ~ One of: "etalon_continuous", "etalon_single",
+                        "cavity_continuous", "cavity_single",
+                        "resonator_continuous", "resonator_single",
+                        "ecd_continuous", "fringe_test", "resonator_ramp",
+                        "ecd_ramp", "cavity_triangular", "resonator_triangular"
+                        See Manual for details
+    transmission_id ~ (int) Arbitrary integer to use for communications
+  Returns:
+    Nothing on successful execution
+  Raises:
+    SolstisError on failed execution
+  """
+
+  send_msg(sock,transmission_id,"fast_scan_stop",{"scan": scan_type})
+  val = recv_msg(sock)
+  verify_msg(val,transmission_id=transmission_id,op="fast_scan_stop_reply")
+  status = val["message"]["parameters"]["status"][0]
+  if status == 0:
+    return
+  elif status == 1:
+    raise SolstisError("fast_scan_stop Failed; Cause unknown")
+  elif status == 2:
+    raise SolstisError("fast_scan_stop Failed; Reference Cavity not fitted.")
+  elif status == 3:
+    raise SolstisError("fast_scan_stop Failed; ECD not fitted.")
+  else:
+    raise solstisError("fast_scan_stop Failed; Invalid Scan Type.")
+
+def fast_scan_stop_nr(sock,scan_type="etalon_continuous",transmission_id=1):
+  """Stops a fast-scan in progress without returning to the original position
+
+  Parameters:
+    sock ~ Sock object to use for communications
+    scan_type ~ One of: "etalon_continuous", "etalon_single",
+                        "cavity_continuous", "cavity_single",
+                        "resonator_continuous", "resonator_single",
+                        "ecd_continuous", "fringe_test", "resonator_ramp",
+                        "ecd_ramp", "cavity_triangular", "resonator_triangular"
+                        See Manual for details
+    transmission_id ~ (int) Arbitrary integer to use for communications
+  Returns:
+    Nothing on successful execution
+  Raises:
+    SolstisError on failed execution
+  """
+
+  send_msg(sock,transmission_id,"fast_scan_stop_nr",{"scan": scan_type})
+  val = recv_msg(sock)
+  verify_msg(val,transmission_id=transmission_id,op="fast_scan_stop_nr_reply")
+  status = val["message"]["parameters"]["status"][0]
+  if status == 0:
+    return
+  elif status == 1:
+    raise SolstisError("fast_scan_stop_nr Failed; Cause unknown")
+  elif status == 2:
+    raise SolstisError("fast_scan_stop_nr Failed; Reference Cavity not fitted.")
+  elif status == 3:
+    raise SolstisError("fast_scan_stop_nr Failed; ECD not fitted.")
+  else:
+    raise solstisError("fast_scan_stop_nr Failed; Invalid Scan Type.")
+
+def set_wave_tolerance_m(sock,tolerance=1.0,transmission_id=1):
+  """Sets the tolerance for the sending of the set_wave_m final report
+
+  Parameters:
+    sock ~ Socket object to use for communications
+    tolerance ~ (float) New tolerance value
+    transmission_id ~ (int) Arbitrary integer for use in communications
+  Returns:
+    Nothing on successful execution
+  Raises:
+    SolstisError on failed execution
+  """
+  send_msg(sock,transmission_id,"set_wave_tolerance_m",{"tolerance": tolerance})
+  val = recv_msg(sock)
+  verify_msg(val,
+             transmission_id=transmission_id,
+             op="set_wave_tolerance_m_reply")
+  status = val["message"]["parameters"]["status"][0]
+  if status == 0:
+    return
+  elif status == 1:
+    raise SolstisError("Could not set tolerance; No wavemeter connected")
+  else:
+    raise SolstisError("Could not set tolerance; Tolerance Value Out of Range")
