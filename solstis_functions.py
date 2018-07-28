@@ -799,7 +799,7 @@ def fast_scan_poll(sock, scan_type="etalon_continuous", transmission_id=1):
   Returns:
     Tuple containing (in increasing index order):
       -floating point value representing the current tuner value
-      -Boolean stating whether tuning is done/inactive (True = Not tuning)
+      -Boolean stating whether tuning is done/inactive (True = Not scanning)
   Raises:
     SolstisError on execution failure
   """
