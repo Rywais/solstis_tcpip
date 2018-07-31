@@ -6,7 +6,7 @@ PERIOD = 10 #Seconds
 SAVE_EVERY_N_SAMPLES = 10
 DATAFILE = 'PD_output'
 
-from solstis_function import *
+from solstis_functions import *
 import time
 import numpy as np
 import matplotlib.pyplot as plt
